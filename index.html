@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://js.puter.com/v2/"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MATH ELO // COMMAND CENTER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- OTPAuth for Google Authenticator Integration -->
+    <script src="https://cdn.jsdelivr.net/npm/otpauth@9.3.1/dist/otpauth.umd.min.js"></script>
+    
+    <!-- MathJax Configuration -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$']],
+                processEscapes: true
+            },
+            options: {
+                enableMenu: false,
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        :root {
+            --bg-obsidian: #020617;
+            --surface: #0f172a;
+            --border: rgba(148, 163, 184, 0.1);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-obsidian);
+            color: #f1f5f9;
+            margin: 0; padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .app-bg {
+            position: fixed; inset: 0; z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
+        }
+
+        /* --- THEME ENGINE --- */
+        #game-screen {
+            --theme-rgb: 59, 130, 246; /* Default Blue */
+            --theme-hex: #3b82f6;
+        }
+        #game-screen.theme-foundation { --theme-rgb: 59, 130, 246; --theme-hex: #3b82f6; }
+        #game-screen.theme-competitive { --theme-rgb: 249, 115, 22; --theme-hex: #f97316; }
+        #game-screen.theme-nightmare { --theme-rgb: 225, 29, 72; --theme-hex: #e11d48; }
+
+        .theme-text { color: var(--theme-hex) !important; }
+        .theme-bg { background-color: var(--theme-hex) !important; color: #fff !important; }
+        .theme-border { border-color: var(--theme-hex) !important; }
+        .theme-bg-subtle { background-color: rgba(var(--theme-rgb), 0.1) !important; }
+        .theme-border-subtle { border-color: rgba(var(--theme-rgb), 0.2) !important; }
+        .theme-shadow { box-shadow: 0 4px 20px rgba(var(--theme-rgb), 0.2) !important; }
+        .hover\:border-theme:hover:not(:disabled) { border-color: var(--theme-hex) !important; background: rgba(var(--theme-rgb), 0.08) !important; }
+
+        /* GLITCH EFFECT (NIGHTMARE > 2200) */
+        #game-screen.glitch-active .math-chamber {
+            animation: glitch-skew 3s infinite linear alternate-reverse;
+            box-shadow: -2px 0 red, 2px 0 cyan, inset 0 4px 12px rgba(0,0,0,0.5);
+            border-color: rgba(225, 29, 72, 0.4);
+        }
+        #game-screen.glitch-active .theme-text, #game-screen.glitch-active .tracking-tighter {
+            text-shadow: 2px 0 red, -2px 0 cyan;
+            animation: glitch-flicker 2s infinite;
+        }
+        @keyframes glitch-skew {
+            0% { transform: skew(0deg); }
+            95% { transform: skew(0deg); }
+            96% { transform: skew(1deg) translate(-2px); }
+            97% { transform: skew(-1deg) translate(2px); }
+            98% { transform: skew(0deg); }
+            100% { transform: skew(0deg); }
+        }
+        @keyframes glitch-flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+            20%, 24%, 55% { opacity: 0.6; }
+        }
+
+        .protocol-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            display: flex; flex-direction: column; justify-content: space-between;
+            min-height: 280px;
+        }
+
+        .protocol-card:hover {
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .protocol-card.active-foundation:hover { border-color: #3b82f6; }
+        .protocol-card.active-competitive:hover { border-color: #f97316; }
+        .protocol-card.active-nightmare:hover { border-color: #e11d48; }
+
+        .math-chamber {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 1.25rem;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.3);
+            min-height: 300px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .option-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            transition: all 0.2s ease;
+            display: flex; align-items: center; gap: 1.25rem;
+            cursor: pointer; width: 100%;
+        }
+
+        .option-card:hover:not(:disabled) {
+            border-color: var(--accent-blue);
+            transform: scale(1.01);
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .option-key {
+            width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 0.5rem; background: rgba(0,0,0,0.3);
+            font-family: 'JetBrains Mono', monospace; font-weight: 800;
+            font-size: 0.75rem; flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .sidebar-hud {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+
+        @media (min-width: 1024px) {
+            .sidebar-hud {
+                width: 280px; height: 100vh;
+                border-right: 1px solid var(--border);
+                border-bottom: none; position: sticky; top: 0;
+            }
+        }
+
+        .label-caps { text-transform: uppercase; letter-spacing: 0.15em; font-size: 0.6rem; font-weight: 700; color: #64748b; }
+
+        .hit-correct { border-color: #10b981 !important; background: rgba(16, 185, 129, 0.1) !important; }
+        .hit-wrong { border-color: #f43f5e !important; background: rgba(244, 63, 94, 0.1) !important; }
+
+        .overlay-glass { background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(20px); z-index: 1000; }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            padding: 1rem 2rem; border-radius: 1rem;
+            width: 100%; text-align: center;
+            font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.1em; transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .action-btn:hover { background: var(--theme-hex, #3b82f6); color: white; transform: scale(1.02); border-color: transparent; }
+
+        .mjx-container { margin: 0 !important; display: inline-block !important; max-width: 100%; overflow-x: auto; vertical-align: middle; }
+
+        .floating-btn {
+            position: fixed; top: 1.5rem; z-index: 100;
+            width: 2.5rem; height: 2.5rem; border-radius: 0.75rem;
+            background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border);
+            color: #94a3b8; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(8px);
+        }
+        .floating-btn:hover { color: white; transform: scale(1.05); }
+        .btn-history { right: 1.5rem; }
+        .btn-saves { right: 4.5rem; }
+    </style>
+</head>
+<body class="select-none flex flex-col min-h-screen relative">
+
+    <div class="app-bg"></div>
+
+    <!-- GLOBAL BUTTONS (Moved Puter button to top right) -->
+    <div class="fixed top-[1.5rem] right-[7.5rem] z-[100]">
+        <button id="puter-auth-btn" onclick="toggleAuth()" onmouseenter="playSound('hover')" class="px-4 py-2.5 bg-slate-900/80 border border-white/10 rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white hover:bg-blue-600/20 hover:border-blue-500/30 transition-all backdrop-blur-md flex items-center gap-2 shadow-lg">
+            <i class="fas fa-user-astronaut text-sm"></i> <span id="puter-auth-text">Link Puter Account</span>
+        </button>
+    </div>
+
+    <button onclick="openModelHistory()" onmouseenter="playSound('hover')" class="floating-btn btn-history" title="Server Uplink Status">
+        <i class="fas fa-server"></i>
+    </button>
+    
+    <button onclick="openSessionsManager()" onmouseenter="playSound('hover')" class="floating-btn btn-saves" title="Save States Folder">
+        <i class="fas fa-folder-open"></i>
+    </button>
+
+    <!-- AUTH OVERLAY FOR 2FA -->
+    <div id="auth-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8 z-[2500]">
+        <div class="max-w-sm w-full space-y-6 text-center bg-slate-900 p-8 rounded-3xl border border-white/5 shadow-2xl transition-all">
+            <div class="w-16 h-16 mx-auto bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20 mb-2">
+                <i class="fas fa-shield-halved text-emerald-500 text-2xl"></i>
+            </div>
+            <h2 class="label-caps text-blue-500">Security Clearance Required</h2>
+            <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">Enter Auth Code</h1>
+            <input type="text" id="auth-input" maxlength="6" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-center text-white font-mono text-3xl tracking-widest focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-700" placeholder="••••••" autocomplete="off" onkeydown="if(event.key==='Enter') verifyAuthCode()">
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeOverlay('auth-overlay')" class="flex-1 py-3 border border-white/10 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all text-slate-400">Cancel</button>
+                <button onclick="verifyAuthCode()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-blue-600/20 transition-all">Verify</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODEL HISTORY OVERLAY -->
+    <div id="model-history-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8 z-[2000]">
+        <div class="max-w-md w-full space-y-6 text-left bg-slate-900 p-8 rounded-3xl border border-white/5 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-2">
+                <div>
+                    <h2 class="label-caps text-blue-500">Diagnostic Panel</h2>
+                    <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">Server Uplink Status</h1>
+                </div>
+                <button onclick="closeOverlay('model-history-overlay')" class="text-slate-500 hover:text-white transition-colors w-8 h-8 flex items-center justify-center rounded-lg bg-white/5"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="model-history-list" class="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-slate-700"></div>
+        </div>
+    </div>
+
+    <!-- SESSIONS / SAVE STATES OVERLAY -->
+    <div id="sessions-list-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8 z-[2000]">
+        <div class="max-w-md w-full space-y-6 text-left bg-slate-900 p-8 rounded-3xl border border-white/5 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-2">
+                <div>
+                    <h2 class="label-caps text-blue-500">Archive</h2>
+                    <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">Save States</h1>
+                </div>
+                <button onclick="closeOverlay('sessions-list-overlay')" class="text-slate-500 hover:text-white transition-colors w-8 h-8 flex items-center justify-center rounded-lg bg-white/5"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="sessions-container" class="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-slate-700">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- SAVE PROMPT OVERLAY (Used on Reset/Load) -->
+    <div id="save-prompt-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8 z-[2100]">
+        <div class="max-w-sm w-full space-y-6 text-center bg-slate-900 p-8 rounded-3xl border border-white/5 shadow-2xl">
+            <h2 class="label-caps text-emerald-500" id="save-prompt-subtitle">State Modification</h2>
+            <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">Save Current State?</h1>
+            <p class="text-sm text-slate-400" id="save-prompt-desc">Do you want to save your current ELO progress before proceeding?</p>
+            <input type="text" id="session-name-input" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-700" placeholder="e.g., Session A">
+            <div class="flex flex-col gap-3 pt-2">
+                <button onclick="executeSaveAction()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-emerald-600/20 transition-all">Yes, Save State</button>
+                <button onclick="skipSaveAction()" class="w-full py-3 border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all">No, Discard Current</button>
+                <button onclick="closeOverlay('save-prompt-overlay')" class="w-full py-3 text-slate-500 hover:text-white font-bold uppercase text-[10px] tracking-widest transition-all">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DELETE PROMPT OVERLAY -->
+    <div id="delete-prompt-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8 z-[2100]">
+        <div class="max-w-sm w-full space-y-6 text-center bg-slate-900 p-8 rounded-3xl border border-white/5 shadow-2xl">
+            <h2 class="label-caps text-rose-500">Data Wipe</h2>
+            <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">Delete State?</h1>
+            <p class="text-sm text-slate-400" id="delete-prompt-desc">Are you sure you want to permanently delete this session?</p>
+            <div class="flex flex-col gap-3 pt-2">
+                <button onclick="executeDeleteAction()" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-rose-600/20 transition-all">Yes, Delete</button>
+                <button onclick="cancelDeleteSession()" class="w-full py-3 text-slate-500 hover:text-white font-bold uppercase text-[10px] tracking-widest transition-all">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WARNING OVERLAY -->
+    <div id="warning-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8 z-[2200]">
+        <div class="max-w-sm w-full space-y-6 text-center bg-slate-900 p-8 rounded-3xl border-2 border-rose-500/50 shadow-2xl">
+            <i class="fas fa-triangle-exclamation text-rose-500 text-5xl"></i>
+            <h1 class="text-2xl font-black italic text-white uppercase tracking-tighter">Critical Warning</h1>
+            <p class="text-sm text-slate-300 leading-relaxed">You have <b class="text-rose-400">0</b> saved states. Proceeding without saving will permanently delete this session's ELO data.</p>
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeOverlay('warning-overlay')" class="flex-1 py-3 border border-white/10 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all text-slate-400">Cancel</button>
+                <button onclick="forceDiscardAction()" class="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all">Delete Anyway</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ERROR OVERLAY -->
+    <div id="error-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8 z-[2000]">
+        <div class="max-w-xl w-full space-y-6 text-center bg-slate-900 p-10 rounded-3xl border-2 border-rose-500/50 shadow-2xl">
+            <i class="fas fa-triangle-exclamation text-rose-500 text-5xl"></i>
+            <h1 class="text-2xl font-black italic text-white uppercase tracking-tighter" id="error-title">Logic Engine Failed</h1>
+            <div class="bg-black/50 p-6 rounded-xl border border-white/10 text-left overflow-auto max-h-64">
+                <p id="error-message" class="text-slate-300 font-sans text-sm leading-relaxed"></p>
+            </div>
+            <button onclick="closeOverlay('error-overlay')" class="action-btn !bg-rose-600 !border-none">Acknowledge & Continue</button>
+        </div>
+    </div>
+
+    <!-- MODE SELECTION OVERLAY -->
+    <div id="mode-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8">
+        <div class="max-w-md w-full space-y-8 text-center bg-slate-900 p-10 rounded-3xl border border-white/5 shadow-2xl">
+            <h2 class="label-caps text-blue-500" id="mode-overlay-title">Neural Gateway</h2>
+            <h1 class="text-4xl font-black italic text-white tracking-tighter uppercase">Protocol Tab</h1>
+            <div class="space-y-4">
+                <button onclick="confirmMode('free')" class="action-btn hover:!bg-blue-600 hover:text-white border-white/10">Free Mode</button>
+                <button onclick="confirmMode('topic')" class="action-btn hover:!bg-blue-600 hover:text-white border-white/10">Topic-wise Mode</button>
+            </div>
+            <div onclick="closeOverlay('mode-overlay'); document.getElementById('start-screen').classList.remove('hidden');" class="mt-6 text-[#64748b] text-[0.65rem] font-bold uppercase tracking-[0.2em] cursor-pointer hover:text-[#f1f5f9] transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i> Cancel Selection
+            </div>
+        </div>
+    </div>
+
+    <!-- TOPIC SELECTION OVERLAY -->
+    <div id="topic-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8">
+        <div class="max-w-md w-full space-y-8 text-center bg-slate-900 p-8 rounded-3xl border border-white/5 shadow-2xl overflow-y-auto max-h-[85vh]">
+            <h2 class="label-caps text-emerald-500" id="topic-overlay-title">Threshold Crossed</h2>
+            <h1 class="text-3xl font-black italic text-white tracking-tighter uppercase">Choose Field</h1>
+            <div class="grid grid-cols-1 gap-3" id="topic-list"></div>
+            <div id="topic-back-container"></div>
+        </div>
+    </div>
+
+    <!-- PAUSE OVERLAY -->
+    <div id="pause-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8">
+        <div class="max-w-md w-full space-y-8 text-center bg-slate-900 p-10 rounded-3xl border border-white/5 shadow-2xl">
+            <h2 class="label-caps mb-2 text-theme" style="color: var(--theme-hex)">Halt Signal Detected</h2>
+            <h1 class="text-6xl font-black italic text-white tracking-tighter">PAUSED</h1>
+            <div class="space-y-4">
+                <button onclick="togglePause()" class="action-btn border-white/10 hover:!bg-white/10 hover:text-white"><i class="fas fa-play mr-3"></i> Resume</button>
+                <button onclick="handleResetProtocol()" class="action-btn border-white/10 hover:!bg-rose-600 hover:border-rose-600 hover:text-white"><i class="fas fa-rotate mr-3"></i> Reset Protocol ELO</button>
+                <button onclick="terminateLink()" class="action-btn border-white/10 hover:!bg-slate-700 hover:text-white"><i class="fas fa-power-off mr-3"></i> Main Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOME PAGE -->
+    <div id="start-screen" class="min-h-screen flex flex-col items-center justify-start p-6 lg:p-12 overflow-y-auto pt-24 lg:pt-16">
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 border border-white/5 mb-4">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                <span class="label-caps !text-slate-400 tracking-widest">Protocol v6.3 // Mobile Stability Core</span>
+            </div>
+            <h1 class="text-6xl md:text-8xl font-black italic tracking-tighter text-white mb-2">MATH<span class="text-blue-500">ELO</span></h1>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl mb-12">
+            <!-- FOUNDATION -->
+            <div onclick="openProtocol('foundation')" onmouseenter="playSound('hover')" class="protocol-card active-foundation p-8 group cursor-pointer border-blue-500/10">
+                <div class="flex justify-between items-start">
+                    <div class="w-10 h-10 bg-blue-600/10 text-blue-500 rounded-xl flex items-center justify-center border border-blue-500/20"><i class="fas fa-seedling text-lg"></i></div>
+                    <span class="label-caps !text-blue-500/50">PROT_01</span>
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-2xl font-bold mb-2 text-white">Foundation</h3>
+                    <p class="text-slate-500 text-sm leading-relaxed">Nursery to Class 8. Perfecting arithmetic and early geometry strings.</p>
+                </div>
+                <div class="flex items-center justify-between pt-4 border-t border-white/5 mt-4">
+                    <div class="flex flex-col">
+                        <span class="label-caps text-blue-400">100 - 625 Elo</span>
+                        <span class="text-xs font-bold text-white mt-1 hidden protocol-status" id="status-foundation">Active Session</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-blue-500 group-hover:translate-x-2 transition-transform"></i>
+                </div>
+            </div>
+
+            <!-- COMPETITIVE -->
+            <div onclick="openProtocol('competitive')" onmouseenter="playSound('hover')" class="protocol-card active-competitive p-8 group cursor-pointer border-orange-500/10 hover:border-orange-500">
+                <div class="flex justify-between items-start">
+                    <div class="w-10 h-10 bg-orange-600/10 text-orange-500 rounded-xl flex items-center justify-center border border-orange-500/20"><i class="fas fa-shield-halved text-lg"></i></div>
+                    <span class="label-caps !text-orange-500/50">PROT_02</span>
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-2xl font-bold mb-2 text-white">Competitive</h3>
+                    <p class="text-slate-500 text-sm leading-relaxed">Class 9 to JEE Mains. High-speed logic for boards and entrance exams.</p>
+                </div>
+                <div class="flex items-center justify-between pt-4 border-t border-white/5 mt-4">
+                    <div class="flex flex-col">
+                        <span class="label-caps text-orange-400">625 - 1375 Elo</span>
+                        <span class="text-xs font-bold text-white mt-1 hidden protocol-status" id="status-competitive">Active Session</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-orange-500 group-hover:translate-x-2 transition-transform"></i>
+                </div>
+            </div>
+
+            <!-- NIGHTMARE -->
+            <div onclick="openProtocol('nightmare')" onmouseenter="playSound('hover')" class="protocol-card active-nightmare p-8 group cursor-pointer border-rose-500/10">
+                <div class="flex justify-between items-start">
+                    <div class="w-10 h-10 bg-rose-600/10 text-rose-500 rounded-xl flex items-center justify-center border border-rose-500/20"><i class="fas fa-radiation text-lg"></i></div>
+                    <span class="label-caps !text-rose-500/50">PROT_03</span>
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-2xl font-bold mb-2 text-white">Nightmare</h3>
+                    <p class="text-slate-500 text-sm leading-relaxed">JEE Adv to Research. Continuous theoretical blending in abstract domains.</p>
+                </div>
+                <div class="flex items-center justify-between pt-4 border-t border-white/5 mt-4">
+                    <div class="flex flex-col">
+                        <span class="label-caps text-rose-400">1375+ Elo</span>
+                        <span class="text-xs font-bold text-white mt-1 hidden protocol-status" id="status-nightmare">Active Session</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-rose-500 group-hover:translate-x-2 transition-transform"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME INTERFACE -->
+    <div id="game-screen" class="hidden flex flex-col lg:flex-row w-full min-h-screen">
+        <aside class="sidebar-hud flex flex-col">
+            <div class="flex justify-between items-start lg:mb-10 pr-12 lg:pr-0">
+                <div>
+                    <h2 class="text-xl font-black italic mb-1 tracking-tighter">MATH<span class="theme-text">ELO</span></h2>
+                    <span class="label-caps theme-text tracking-widest">Link Established</span>
+                </div>
+                <button onclick="togglePause()" class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 text-slate-400 border border-white/5">
+                    <i class="fas fa-pause text-xs"></i>
+                </button>
+            </div>
+
+            <div class="relative p-6 bg-slate-900/50 rounded-2xl theme-border-subtle border my-6 lg:mb-8 text-center theme-shadow transition-all">
+                <p class="label-caps mb-2 theme-text">Student Rating</p>
+                <div class="flex items-center justify-center gap-3">
+                    <span id="player-elo" class="text-6xl font-black tabular-nums tracking-tighter text-white">100</span>
+                    <div id="elo-anim-container" class="absolute right-4 top-4"></div>
+                </div>
+                <div id="velocity-tag" class="mt-4 text-[9px] font-bold theme-text theme-bg-subtle block py-0.5 rounded theme-border-subtle border uppercase tracking-wider">Active Workspace</div>
+            </div>
+
+            <div class="flex flex-col space-y-6">
+                <div class="text-center lg:text-left">
+                    <p class="label-caps mb-1 text-slate-500">Academic Rank</p>
+                    <p id="difficulty-badge" class="text-lg font-bold theme-text tracking-tight">Nursery/KG</p>
+                </div>
+                <div class="flex justify-between border-t border-white/5 pt-6">
+                    <div><p class="label-caps mb-1 text-center text-slate-500">Streak</p><p id="streak" class="text-xl font-bold text-white text-center">0</p></div>
+                    <div><p class="label-caps mb-1 text-center text-slate-500">Accuracy</p><p id="accuracy-text" class="text-xl font-bold text-white text-center">100%</p></div>
+                </div>
+            </div>
+            
+            <div class="mt-auto hidden lg:block">
+                <div id="focus-tag" class="p-4 theme-bg-subtle rounded-xl theme-border-subtle border text-[10px] font-bold text-center theme-text uppercase tracking-widest">Free Mode</div>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-6 lg:p-12 flex justify-center overflow-y-auto">
+            <div class="w-full max-w-4xl">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900/30 p-5 rounded-2xl theme-border-subtle border mb-6 gap-4">
+                    <div class="flex items-center gap-4">
+                        <span class="label-caps text-slate-500">Phase <span id="question-num" class="text-white">1</span></span>
+                        <div class="hidden md:block h-4 w-[1px] bg-white/10"></div>
+                        <span id="topic-tag" class="label-caps theme-text uppercase tracking-widest">Scanning Logic...</span>
+                    </div>
+                    <div class="flex gap-8 w-full md:w-auto justify-between md:justify-end">
+                        <div class="text-right"><p class="label-caps text-slate-500">Award</p><p id="potential-gain-text" class="text-lg font-black theme-text">+32</p></div>
+                        <div class="text-right"><p class="label-caps text-slate-500">Time</p><p id="timer-text" class="text-lg font-black font-mono text-white">0.0s</p></div>
+                    </div>
+                </div>
+
+                <div class="relative mb-6">
+                    <div id="loading-overlay" class="absolute inset-0 z-50 hidden flex-col items-center justify-center bg-[#020617]/95 backdrop-blur-md rounded-3xl border theme-border-subtle">
+                        <div class="loading-ring mb-4" style="border-top-color: var(--theme-hex)"></div>
+                        <p class="label-caps animate-pulse theme-text">Assembling Logic Chains</p>
+                    </div>
+                    <div id="feedback-overlay" class="absolute inset-0 z-[60] hidden flex-col items-center justify-center text-[10rem] pointer-events-none transition-all duration-300"></div>
+                    <div id="question-card" class="math-chamber flex items-center justify-center text-xl md:text-3xl text-center leading-relaxed text-white"></div>
+                </div>
+
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
+
+                <div id="solution-area" class="hidden p-8 theme-bg-subtle theme-border-subtle border rounded-3xl mb-6 overflow-hidden">
+                    <h4 class="label-caps theme-text mb-4 flex items-center gap-2"><i class="fas fa-brain"></i> Solution Pathway</h4>
+                    <div id="solution-text" class="text-slate-300 leading-relaxed italic text-base md:text-lg"></div>
+                </div>
+
+                <div id="action-bar" class="hidden flex flex-col md:flex-row gap-4 pt-4">
+                    <button id="show-solution-btn" onmouseenter="playSound('hover')" onclick="handleShowSolution()" class="flex-1 py-4 border border-white/10 text-slate-400 rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-white/5 hover:text-white transition-all">Examine Trace</button>
+                    <button onclick="generateAIQuestion()" onmouseenter="playSound('hover')" class="flex-[2] py-4 theme-bg rounded-2xl font-bold uppercase text-[10px] tracking-widest theme-shadow transition-all hover:opacity-90 border border-white/10">Next Phase <i class="fas fa-chevron-right ml-4"></i></button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const INITIAL_K = 40; 
+        const BASE_K = 32;
+        const MIN_WIN = 15;
+        const MAX_WIN = 35;
+
+        const TOPIC_TREES = {
+            "Calculus": { label: "Calculus", milestones: {
+                "jee_adv": ["Advanced Integration", "Differential Equations", "Limits & Continuity"],
+                "bachelors": ["Real Analysis", "Vector Calculus", "Metric Spaces"],
+                "phd": ["Measure Theory", "Functional Analysis", "PDEs"],
+                "research": ["Topological Dynamics", "Spectral Theory"]
+            }},
+            "Algebra": { label: "Algebra", milestones: {
+                "jee_adv": ["Complex Numbers", "Matrices", "Probability Distributions"],
+                "bachelors": ["Group Theory", "Linear Algebra", "Ring Theory"],
+                "phd": ["Galois Theory", "Field Theory", "Module Theory"],
+                "research": ["Commutative Algebra", "Lie Algebras"]
+            }},
+            "Geometry": { label: "Geometry", milestones: {
+                "jee_adv": ["Conic Sections", "3D Coordinate Geometry", "Vectors"],
+                "bachelors": ["Euclidean Geometry", "Differential Geometry", "Topology"],
+                "phd": ["Riemannian Manifolds", "Homology Theory"],
+                "research": ["Symplectic Geometry", "Kaehler Manifolds"]
+            }}
+        };
+
+        const TIER_BORDERS = [
+            { label: "Nursery/KG", boundary: 150 },
+            { label: "Class 1", boundary: 200 }, { label: "Class 2", boundary: 250 },
+            { label: "Class 3", boundary: 300 }, { label: "Class 4", boundary: 350 },
+            { label: "Class 5", boundary: 400 },
+            { label: "Class 6", boundary: 475 }, { label: "Class 7", boundary: 550 },
+            { label: "Class 8", boundary: 625 },
+            { label: "Class 9", boundary: 725 }, { label: "Class 10 Boards", boundary: 825 },
+            { label: "Class 11", boundary: 975 }, { label: "Class 12 Boards", boundary: 1125 },
+            { label: "JEE Mains", boundary: 1375 },
+            { label: "JEE Advanced", boundary: 1800 },
+            { label: "Bachelors Level", boundary: 2300 },
+            { label: "PhD Level", boundary: 2800 },
+            { label: "Advanced Research", boundary: 10000 }
+        ];
+
+        const AI_MODELS = [
+            "gemini-3.1-pro-preview",
+            "gemini-3-pro-preview",
+            "gemini-3.1-flash-preview",
+            "gemini-3-flash-preview",
+            "gemini-3.1-flash-lite-preview",
+            "gemini-2.5-pro-preview",
+            "gemini-2.5-pro",
+            "gemini-2.5-pro-preview-05-06",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-preview-09-2025",
+            "gemini-2.0-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash-001",
+            "gemini-2.5-flash-lite-preview-09-2025",
+            "gemini-2.0-flash-lite"
+        ];
+
+        const DEFAULT_PROTOCOLS = {
+            foundation:  { elo: 100,  totalPlayed: 0, solved: 0, streak: 0, currentQuestion: null, puzzleElo: 100,  difficultyLabel: 'Nursery', elapsedTime: 0, specializationHistory: [], lastMilestoneReached: null, subMode: 'free', isResolved: false, selectedAnswer: null, lastTopics: [] },
+            competitive: { elo: 625,  totalPlayed: 0, solved: 0, streak: 0, currentQuestion: null, puzzleElo: 625,  difficultyLabel: 'Class 9', elapsedTime: 0, specializationHistory: [], lastMilestoneReached: null, subMode: 'free', isResolved: false, selectedAnswer: null, lastTopics: [] },
+            nightmare:   { elo: 1375, totalPlayed: 0, solved: 0, streak: 0, currentQuestion: null, puzzleElo: 1375, difficultyLabel: 'JEE Advanced', elapsedTime: 0, specializationHistory: [], lastMilestoneReached: null, subMode: 'free', isResolved: false, selectedAnswer: null, lastTopics: [] }
+        };
+
+        let globalState = {
+            sessions: [], // Array of saved states
+            currentProtocol: 'foundation',
+            protocols: JSON.parse(JSON.stringify(DEFAULT_PROTOCOLS))
+        };
+        
+        // Helper to access active workspace
+        function getP() { return globalState.protocols[globalState.currentProtocol]; }
+
+        let currentModelIndex = 0;
+        let pendingAction = null; // Used for saving states
+        let sessionToDelete = null; // Target ID for deletion
+        let timerInterval = null;
+
+        // --- PUTER AUTHENTICATION & SAVE SYSTEM ---
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            try { initPuter(); } catch(e) { console.warn("Puter init failed", e); }
+        });
+
+        async function initPuter() {
+            if (typeof puter === 'undefined') return;
+            if (puter.auth.isSignedIn()) {
+                const user = await puter.auth.getUser();
+                document.getElementById('puter-auth-text').innerText = `${user.username} (Sign Out)`;
+                await loadState();
+            }
+        }
+
+        async function toggleAuth() {
+            playSound('click');
+            if (typeof puter === 'undefined') {
+                alert("Puter API failed to load.");
+                return;
+            }
+            
+            if (puter.auth.isSignedIn()) {
+                puter.auth.signOut();
+                document.getElementById('puter-auth-text').innerText = `Link Puter Account`;
+                globalState.protocols = JSON.parse(JSON.stringify(DEFAULT_PROTOCOLS));
+                globalState.sessions = [];
+                updateStartScreenUI();
+            } else {
+                try {
+                    // Check if running locally on file:// which breaks mobile auth
+                    if (window.location.protocol === 'file:' || window.location.protocol === 'content:') {
+                        alert("⚠️ MOBILE AUTH WARNING: You are running this file locally. Cloud Login requires the app to be hosted on a web server (https://). Please host this file (e.g., via Puter.com) to enable cloud saves on your phone!");
+                    }
+                    
+                    await puter.auth.signIn();
+                    const user = await puter.auth.getUser();
+                    document.getElementById('puter-auth-text').innerText = `${user.username} (Sign Out)`;
+                    await loadState();
+                } catch (error) {
+                    console.error("Auth failed:", error);
+                    alert("Authentication canceled or blocked. If you are on a phone, ensure you aren't using an in-app browser or blocking popups.");
+                }
+            }
+        }
+
+        async function saveState() {
+            if (typeof puter !== 'undefined' && puter.auth.isSignedIn()) {
+                await puter.kv.set('math_elo_v6', globalState);
+            }
+        }
+
+        async function loadState() {
+            try {
+                if (typeof puter === 'undefined') return;
+                const saved = await puter.kv.get('math_elo_v6');
+                if (saved) {
+                    globalState = { ...globalState, ...saved };
+                    updateStartScreenUI();
+                }
+            } catch (e) {
+                console.log("No saved state found.");
+            }
+        }
+
+        function updateStartScreenUI() {
+            ['foundation', 'competitive', 'nightmare'].forEach(prot => {
+                const el = document.getElementById(`status-${prot}`);
+                if(globalState.protocols[prot].totalPlayed > 0 || globalState.protocols[prot].currentQuestion) {
+                    el.classList.remove('hidden');
+                    el.innerText = `Active Session: ${Math.round(globalState.protocols[prot].elo)} Elo`;
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- SESSION MANAGEMENT LOGIC ---
+
+        function openSessionsManager() {
+            playSound('click');
+            const container = document.getElementById('sessions-container');
+            container.innerHTML = '';
+
+            if (globalState.sessions.length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-sm text-center italic mt-4">No saved states in the archive.</p>';
+            } else {
+                globalState.sessions.forEach(session => {
+                    const div = document.createElement('div');
+                    div.className = 'p-4 rounded-xl bg-slate-800/50 border border-white/5 flex justify-between items-center group hover:bg-slate-800 transition-colors';
+                    div.innerHTML = `
+                        <div>
+                            <p class="text-sm font-bold text-white">${session.name}</p>
+                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">${session.timestamp}</p>
+                        </div>
+                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <button class="delete-session-btn px-3 py-2 bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-all" title="Delete Session"><i class="fas fa-trash-alt"></i></button>
+                            <button class="load-session-btn px-4 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-all">Load</button>
+                        </div>
+                    `;
+                    div.querySelector('.load-session-btn').onclick = () => confirmLoadSession(session.id);
+                    div.querySelector('.delete-session-btn').onclick = (e) => {
+                        e.stopPropagation();
+                        confirmDeleteSession(session.id, session.name);
+                    };
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('sessions-list-overlay').classList.remove('hidden');
+            // Ensure flex is added
+            document.getElementById('sessions-list-overlay').classList.add('flex');
+        }
+
+        function confirmLoadSession(id) {
+            playSound('click');
+            pendingAction = { type: 'load', id: id };
+            document.getElementById('save-prompt-subtitle').innerText = "Context Switch";
+            document.getElementById('save-prompt-desc').innerText = "Do you want to save your CURRENT workspace before loading the state?";
+            document.getElementById('session-name-input').value = "";
+            
+            document.getElementById('sessions-list-overlay').classList.add('hidden');
+            document.getElementById('save-prompt-overlay').classList.remove('hidden');
+            document.getElementById('save-prompt-overlay').classList.add('flex');
+            document.getElementById('session-name-input').focus();
+        }
+        
+        function confirmDeleteSession(id, name) {
+            playSound('click');
+            sessionToDelete = id;
+            document.getElementById('delete-prompt-desc').innerText = `Are you sure you want to permanently delete "${name}"?`;
+            
+            document.getElementById('sessions-list-overlay').classList.add('hidden');
+            document.getElementById('delete-prompt-overlay').classList.remove('hidden');
+            document.getElementById('delete-prompt-overlay').classList.add('flex');
+        }
+        
+        function executeDeleteAction() {
+            playSound('wrong'); 
+            if (sessionToDelete) {
+                globalState.sessions = globalState.sessions.filter(s => s.id !== sessionToDelete);
+                saveState();
+                sessionToDelete = null;
+            }
+            document.getElementById('delete-prompt-overlay').classList.add('hidden');
+            openSessionsManager();
+        }
+        
+        function cancelDeleteSession() {
+            playSound('hover');
+            document.getElementById('delete-prompt-overlay').classList.add('hidden');
+            document.getElementById('sessions-list-overlay').classList.remove('hidden');
+            document.getElementById('sessions-list-overlay').classList.add('flex');
+        }
+
+        function handleResetProtocol() {
+            playSound('click');
+            pendingAction = { type: 'reset' };
+            document.getElementById('save-prompt-subtitle').innerText = "Data Wipe Initiated";
+            document.getElementById('save-prompt-desc').innerText = `Do you want to save your current progress in ${globalState.currentProtocol.toUpperCase()} before resetting?`;
+            document.getElementById('session-name-input').value = "";
+            
+            document.getElementById('pause-overlay').classList.add('hidden');
+            document.getElementById('save-prompt-overlay').classList.remove('hidden');
+            document.getElementById('save-prompt-overlay').classList.add('flex');
+            document.getElementById('session-name-input').focus();
+        }
+
+        function executeSaveAction() {
+            playSound('click');
+            const name = document.getElementById('session-name-input').value.trim() || `Session ${globalState.sessions.length + 1}`;
+            
+            globalState.sessions.push({
+                id: Date.now().toString(),
+                name: name,
+                timestamp: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString(),
+                protocols: JSON.parse(JSON.stringify(globalState.protocols))
+            });
+
+            closeOverlay('save-prompt-overlay');
+            proceedWithPendingAction();
+        }
+
+        function skipSaveAction() {
+            playSound('click');
+            closeOverlay('save-prompt-overlay');
+            
+            if (pendingAction.type === 'reset' && globalState.sessions.length === 0) {
+                document.getElementById('warning-overlay').classList.remove('hidden');
+                document.getElementById('warning-overlay').classList.add('flex');
+            } else {
+                proceedWithPendingAction();
+            }
+        }
+
+        function forceDiscardAction() {
+            playSound('wrong');
+            closeOverlay('warning-overlay');
+            proceedWithPendingAction();
+        }
+
+        function proceedWithPendingAction() {
+            if (pendingAction.type === 'reset') {
+                globalState.protocols[globalState.currentProtocol] = JSON.parse(JSON.stringify(DEFAULT_PROTOCOLS[globalState.currentProtocol]));
+                saveState();
+                updateStartScreenUI();
+                terminateLink(); // Return to main
+            } else if (pendingAction.type === 'load') {
+                const target = globalState.sessions.find(s => s.id === pendingAction.id);
+                if (target) {
+                    globalState.protocols = JSON.parse(JSON.stringify(target.protocols));
+                    saveState();
+                    updateStartScreenUI();
+                    // if currently in game, reset back to main screen to reflect changes cleanly
+                    terminateLink(); 
+                }
+            }
+            pendingAction = null;
+        }
+
+        // Setup OTPAuth for Google Authenticator Lock
+        let adminTotp = null;
+        window.addEventListener('load', () => {
+            try {
+                if (typeof OTPAuth !== 'undefined') {
+                    adminTotp = new OTPAuth.TOTP({
+                        issuer: "MathELO",
+                        label: "Admin",
+                        algorithm: "SHA1",
+                        digits: 6,
+                        period: 30,
+                        secret: "JBSWY3DPEHPK3PXP" // Base32 Secret
+                    });
+                }
+            } catch(e) {
+                console.warn("OTPAuth failed to load", e);
+            }
+        });
+
+        let audioCtx = null;
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch(e) {
+            console.warn("AudioContext not supported", e);
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            
+            function osc(f, t, d, s, e) {
+                const o = audioCtx.createOscillator(); 
+                const g = audioCtx.createGain();
+                o.type = t; 
+                o.connect(g); 
+                g.connect(audioCtx.destination);
+                o.frequency.setValueAtTime(f, now); 
+                g.gain.setValueAtTime(s, now);
+                g.gain.exponentialRampToValueAtTime(Math.max(e, 0.0001), now + d); 
+                o.start(now);
+                // Hard kill after ramp finishes to prevent overlapping drone
+                o.stop(now + d + 0.05); 
+                return o;
+            }
+
+            switch(type) {
+                case 'hover': osc(2000, 'sine', 0.2, 0.01, 0.0001); break;
+                case 'click': const c = osc(1000, 'square', 0.1, 0.03, 0.0001); c.frequency.exponentialRampToValueAtTime(100, now+0.1); break;
+                case 'correct': [440, 660, 880].forEach(f => { const o = osc(f, 'sine', 0.4, 0.05, 0.0001); o.frequency.exponentialRampToValueAtTime(f*2, now+0.4); }); break;
+                case 'wrong': osc(100, 'sawtooth', 0.5, 0.1, 0.0001); break;
+                case 'resume': osc(100, 'sine', 0.8, 0.05, 0.0001); break;
+                case 'pause': osc(500, 'triangle', 0.5, 0.05, 0.0001); break;
+                case 'next': osc(300, 'sine', 0.5, 0.04, 0.0001); break;
+            }
+        }
+
+        const SYSTEM_PROMPT = `
+        You are an elite Indian Math Professor specializing in continuous difficulty blending.
+        Return ONLY JSON for a question.
+        
+        LINEAR BLENDING RULE:
+        - If progress in current tier A is < 75%: 100% Level A questions.
+        - If progress > 75% in A: Begin linear blend towards Level B.
+        - At boundary m: 50% A, 50% B.
+        - Once in tier B, if progress < 25%: Linear blend from 50/50 back to 100% B.
+        
+        STRICT RULES:
+        1. EXPLANATION LENGTH: Must be a concise, step-by-step calculation (3-5 sentences). NO 1-sentence answers. Absolutely NO massive theoretical walls of text.
+        2. LATEX SPACING (CRITICAL): Maintain spaces between words and math! Keep text outside the $...$ markers or use \\text{ } inside them. (e.g., "$x=1$ and $y=2$" instead of "$x=1and y=2$"). Do NOT squish words into equations.
+        
+        FORMAT: Wrap EVERY math term, symbol, number, and variable in $. 
+        JSON REQUIRED: {"question": "...", "options": ["...", "...", "...", "..."], "correct": "exact_match", "explanation": "...", "topic": "..."}
+        `;
+
+        function openProtocol(protocolName) {
+            playSound('click');
+            globalState.currentProtocol = protocolName;
+            const p = getP();
+            
+            // If active session, resume directly
+            if (p.totalPlayed > 0 || p.currentQuestion) {
+                launchGameUI();
+                return;
+            }
+            
+            // Fresh protocol, ask for mode
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('mode-overlay-title').innerText = `${protocolName} Protocol`;
+            document.getElementById('mode-overlay').classList.remove('hidden');
+            document.getElementById('mode-overlay').classList.add('flex');
+        }
+
+        function confirmMode(m) {
+            playSound('click');
+            getP().subMode = m;
+            document.getElementById('mode-overlay').classList.add('hidden');
+            launchGameUI();
+        }
+
+        function closeOverlay(id) { 
+            playSound('hover');
+            document.getElementById(id).classList.add('hidden'); 
+            document.getElementById(id).classList.remove('flex'); 
+        }
+
+        function showTopicSelection(milestone) {
+            const list = document.getElementById('topic-list');
+            const backContainer = document.getElementById('topic-back-container');
+            list.innerHTML = ''; backContainer.innerHTML = '';
+            
+            const isBase = milestone === 'base';
+            const isDirectNightmareStart = milestone === 'jee_adv' && getP().elo >= 1375 && getP().specializationHistory.length === 0;
+
+            if (isBase || isDirectNightmareStart) {
+                document.getElementById('topic-overlay-title').innerText = isBase ? "Class 11 Milestone" : "Nightmare Milestone";
+                ["Calculus", "Algebra", "Geometry"].forEach(t => {
+                    const btn = document.createElement('button'); btn.className = 'action-btn hover:border-white/20'; btn.innerText = t;
+                    btn.onclick = () => selectSpecialization(t); list.appendChild(btn);
+                });
+            } else {
+                document.getElementById('topic-overlay-title').innerText = milestone.toUpperCase().replace('_', ' ') + " Specialization";
+                const parent = getP().currentSpecialization;
+                const options = TOPIC_TREES[parent]?.milestones[milestone] || ["Calculus", "Algebra", "Geometry"];
+                options.forEach(t => {
+                    const btn = document.createElement('button'); btn.className = 'action-btn hover:border-white/20'; btn.innerText = t;
+                    btn.onclick = () => selectSpecialization(t); list.appendChild(btn);
+                });
+
+                const branchBtn = document.createElement('button');
+                branchBtn.className = 'action-btn !bg-white/5 !text-slate-500 mt-4 border-dashed hover:border-white/20';
+                branchBtn.innerHTML = '<i class="fas fa-code-branch mr-2"></i> Change Core Specialization';
+                branchBtn.onclick = () => { getP().currentSpecialization = null; showTopicSelection('base'); };
+                list.appendChild(branchBtn);
+                
+                const b = document.createElement('div');
+                b.className = 'back-nav'; b.innerHTML = '<i class="fas fa-arrow-left mr-2"></i> Review Previous Selection';
+                b.onclick = () => {
+                    getP().specializationHistory.pop();
+                    if (getP().specializationHistory.length === 0) getP().currentSpecialization = null;
+                    showTopicSelection(milestone);
+                };
+                backContainer.appendChild(b);
+            }
+            document.getElementById('topic-overlay').classList.remove('hidden');
+            document.getElementById('topic-overlay').classList.add('flex');
+        }
+
+        function selectSpecialization(topic) {
+            playSound('click');
+            if (!getP().currentSpecialization) getP().currentSpecialization = topic;
+            getP().specializationHistory.push(topic);
+            document.getElementById('topic-overlay').classList.add('hidden');
+            saveState(); 
+            generateAIQuestion();
+        }
+
+        function applyDynamicTheme() {
+            const p = getP();
+            const gs = document.getElementById('game-screen');
+            gs.classList.remove('theme-foundation', 'theme-competitive', 'theme-nightmare', 'glitch-active');
+            gs.classList.add(`theme-${globalState.currentProtocol}`);
+            
+            if (globalState.currentProtocol === 'nightmare' && p.elo >= 2200) {
+                gs.classList.add('glitch-active');
+            }
+        }
+
+        function launchGameUI() {
+            playSound('resume');
+            currentModelIndex = 0; 
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            
+            applyDynamicTheme();
+            updateUI();
+            
+            // Check if we have an exact saved state to resume
+            const p = getP();
+            if (p.currentQuestion) {
+                renderSavedState();
+            } else {
+                generateAIQuestion();
+            }
+        }
+
+        function renderSavedState() {
+            const p = getP();
+            renderQuestion();
+            const el = document.getElementById('timer-text');
+            el.innerText = p.elapsedTime.toFixed(1) + 's';
+            
+            if (p.isResolved) {
+                // Restore the resolved UI state
+                document.getElementById('action-bar').classList.remove('hidden');
+                document.querySelectorAll('#options-container button').forEach(btn => {
+                    btn.disabled = true;
+                    const txt = btn.querySelector('span:last-child');
+                    if (txt && norm(txt.innerText) === norm(p.currentQuestion.answer)) btn.classList.add('hit-correct');
+                    if (p.selectedAnswer && txt && norm(txt.innerText) === norm(p.selectedAnswer) && norm(p.selectedAnswer) !== norm(p.currentQuestion.answer)) {
+                        btn.classList.add('hit-wrong');
+                    }
+                });
+            } else {
+                // Resume timer
+                startTimer(true);
+            }
+        }
+
+        function calculateBlend(elo) {
+            let lowIdx = 0;
+            while(lowIdx < TIER_BORDERS.length - 1 && TIER_BORDERS[lowIdx].boundary <= elo) lowIdx++;
+            const A = TIER_BORDERS[lowIdx];
+            const B = TIER_BORDERS[lowIdx+1] || { label: "End", boundary: 10000 };
+            const l = lowIdx > 0 ? TIER_BORDERS[lowIdx-1].boundary : 0;
+            const m = A.boundary;
+            
+            const progress = (elo - l) / (m - l);
+            if (progress < 0.75) return `100% ${A.label}`;
+            const exit_start = m - 0.25 * (m - l);
+            const exit_end = m + 0.25 * (B.boundary - m);
+            if (elo >= exit_start && elo <= exit_end) {
+                const pctB = Math.round(((elo - exit_start) / (exit_end - exit_start)) * 100);
+                return `${100 - pctB}% ${A.label}, ${pctB}% ${B.label}`;
+            }
+            return `100% ${B.label}`;
+        }
+
+        function showModelToast() {
+            let toast = document.getElementById('model-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'model-toast';
+                toast.className = 'fixed bottom-6 right-6 bg-rose-600 text-white px-6 py-4 rounded-2xl border border-rose-500 shadow-2xl z-[9999] font-bold text-xs tracking-wide transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none leading-relaxed';
+                document.body.appendChild(toast);
+            }
+            toast.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i> Switching model to weaker one, come next day for stronger model`;
+            
+            void toast.offsetWidth;
+            toast.style.transform = 'translateY(0)';
+            toast.style.opacity = '1';
+            
+            setTimeout(() => {
+                toast.style.transform = 'translateY(20px)';
+                toast.style.opacity = '0';
+            }, 5000);
+        }
+
+        function openModelHistory() {
+            playSound('click');
+            const inputEl = document.getElementById('auth-input');
+            inputEl.value = ''; 
+            inputEl.classList.remove('border-rose-500', 'text-rose-500');
+            document.getElementById('auth-overlay').classList.remove('hidden');
+            document.getElementById('auth-overlay').classList.add('flex');
+            inputEl.focus();
+        }
+
+        function verifyAuthCode() {
+            playSound('click');
+            if (!adminTotp) {
+                alert("Security module unavailable.");
+                return;
+            }
+
+            const authCode = document.getElementById('auth-input').value.trim();
+            if (!authCode) return;
+            
+            const delta = adminTotp.validate({ token: authCode, window: 1 });
+            if (delta === null) {
+                const inputEl = document.getElementById('auth-input');
+                inputEl.classList.add('border-rose-500', 'text-rose-500');
+                setTimeout(() => inputEl.classList.remove('border-rose-500', 'text-rose-500'), 800);
+                return;
+            }
+
+            document.getElementById('auth-overlay').classList.add('hidden');
+            
+            const list = document.getElementById('model-history-list');
+            list.innerHTML = '';
+            
+            AI_MODELS.forEach((model, index) => {
+                const div = document.createElement('div');
+                const displayModelName = model;
+                
+                if (index < currentModelIndex) {
+                    div.className = 'p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex justify-between items-center';
+                    div.innerHTML = `<span class="font-mono text-sm">${displayModelName}</span> <span class="text-[10px] font-bold uppercase px-2 py-1 bg-rose-500/20 rounded">Offline</span>`;
+                } else if (index === currentModelIndex) {
+                    div.className = 'p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex justify-between items-center shadow-[0_0_15px_rgba(16,185,129,0.1)]';
+                    div.innerHTML = `<span class="font-mono text-sm">${displayModelName}</span> <span class="text-[10px] font-bold uppercase px-2 py-1 bg-emerald-500/20 rounded animate-pulse">Active</span>`;
+                } else {
+                    div.className = 'p-4 rounded-xl bg-slate-800/50 border border-white/5 text-slate-500 flex justify-between items-center opacity-70';
+                    div.innerHTML = `<span class="font-mono text-sm">${displayModelName}</span> <span class="text-[10px] font-bold uppercase px-2 py-1 bg-white/5 rounded">Standby</span>`;
+                }
+                list.appendChild(div);
+            });
+            
+            document.getElementById('model-history-overlay').classList.remove('hidden');
+            document.getElementById('model-history-overlay').classList.add('flex');
+        }
+
+        async function fetchWithRetry(prompt, retries = 2, delay = 1000) {
+            const combinedPrompt = SYSTEM_PROMPT + "\n\n---\n\nUSER REQUEST:\n" + prompt;
+
+            while (currentModelIndex < AI_MODELS.length) {
+                const modelName = AI_MODELS[currentModelIndex];
+                
+                for (let i = 0; i <= retries; i++) {
+                    try {
+                        const response = await puter.ai.chat(
+                            combinedPrompt, 
+                            { 
+                                model: modelName,
+                                response_format: { type: "json_object" } 
+                            }
+                        );
+
+                        const content = response.toString();
+                        if (!content) throw new Error("Node returned empty/null content.");
+                        
+                        let jsonString = content.replace(/```json|```/g, '').trim();
+                        const jsonStart = jsonString.indexOf('{');
+                        const jsonEnd = jsonString.lastIndexOf('}') + 1;
+                        if (jsonStart !== -1 && jsonEnd !== 0) {
+                            jsonString = jsonString.substring(jsonStart, jsonEnd);
+                        }
+
+                        return JSON.parse(jsonString);
+                        
+                    } catch (error) {
+                        console.warn(`[${modelName}] Attempt ${i + 1} failed: ${error.message}`);
+                        const errStr = error.message.toLowerCase();
+                        if (errStr.includes("limit") || errStr.includes("quota") || errStr.includes("free") || errStr.includes("exhausted") || errStr.includes("not found") || errStr.includes("429") || i === retries) {
+                            showModelToast();
+                            currentModelIndex++; 
+                            break; 
+                        }
+                        await new Promise(res => setTimeout(res, delay * Math.pow(2, i)));
+                    }
+                }
+            }
+            throw new Error("All server nodes in the matrix have been exhausted for today.");
+        }
+
+        async function generateAIQuestion() {
+            const p = getP();
+            const elo = p.elo;
+            
+            if (p.subMode === 'topic') {
+                if (elo >= 2800 && p.lastMilestoneReached !== 'research') { showTopicSelection('research'); p.lastMilestoneReached = 'research'; return; }
+                if (elo >= 2300 && p.lastMilestoneReached !== 'phd') { showTopicSelection('phd'); p.lastMilestoneReached = 'phd'; return; }
+                if (elo >= 1800 && p.lastMilestoneReached !== 'bachelors') { showTopicSelection('bachelors'); p.lastMilestoneReached = 'bachelors'; return; }
+                if (elo >= 1375 && p.lastMilestoneReached !== 'jee_adv') { showTopicSelection('jee_adv'); p.lastMilestoneReached = 'jee_adv'; return; }
+                if (elo >= 825 && p.lastMilestoneReached === null) { showTopicSelection('base'); p.lastMilestoneReached = 'base'; return; }
+            }
+
+            // state.isGenerating prevents overlapping clicks
+            p.isResolved = false;
+            p.selectedAnswer = null;
+            if (p.totalPlayed > 0) playSound('next');
+            
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            }
+            document.getElementById('solution-area').classList.add('hidden');
+            document.getElementById('action-bar').classList.add('hidden');
+            document.getElementById('show-solution-btn').disabled = false;
+            document.getElementById('question-card').classList.remove('hit-correct', 'hit-wrong');
+            
+            const feedbackOverlay = document.getElementById('feedback-overlay');
+            if(feedbackOverlay) { feedbackOverlay.classList.add('hidden'); feedbackOverlay.classList.remove('flex'); feedbackOverlay.innerHTML = ''; }
+
+            p.puzzleElo = Math.round(p.elo + (Math.random() * 50 - 15));
+            p.difficultyLabel = getDifficultyLabel(p.elo);
+            const blend = calculateBlend(p.elo);
+            
+            let topicHint = (p.subMode === 'topic' && p.elo >= 825 && p.specializationHistory.length > 0) ? `FOCUS: ${p.specializationHistory.at(-1)}. ` : "";
+            let ageConstraint = p.elo < 475 ? "NO word problems. Use direct numerical or algebraic equations only. " : "";
+            
+            const prompt = `Elo: ${p.elo}. Blend Target: ${blend}. ${topicHint}${ageConstraint}Standard: Indian ${p.difficultyLabel}. Avoid recent topics: ${p.lastTopics.join(', ')}.`;
+
+            try {
+                const data = await fetchWithRetry(prompt);
+                p.lastTopics.push(data.topic); if (p.lastTopics.length > 5) p.lastTopics.shift();
+                p.currentQuestion = { q: data.question, options: data.options, answer: data.correct, explanation: data.explanation, topic: data.topic || "Analysis" };
+                
+                calculateStaticGain(); 
+                renderQuestion(); 
+                p.elapsedTime = 0; 
+                saveState();
+                startTimer();
+            } catch (err) { 
+                console.error("Generation Error:", err); 
+                const errBox = document.getElementById('error-overlay');
+                const errMsg = document.getElementById('error-message');
+                document.getElementById('error-title').innerText = "Logic Engine Failed";
+                errMsg.innerHTML = `Primary Logic Engine Failed.<br><br><b>Details:</b><br>${err.message}<br><br>Falling back to local logic.`;
+                errBox.classList.remove('hidden');
+                errBox.classList.add('flex');
+                generateFallback(); 
+            } finally { 
+                if (overlay) {
+                    overlay.classList.add('hidden'); 
+                    overlay.classList.remove('flex');
+                }
+                updateUI(); 
+                applyDynamicTheme();
+            }
+        }
+
+        function generateFallback() {
+            const p = getP();
+            p.currentQuestion = { q: "Solve: $x + 5 = 15$", options: ["$10$", "$5$", "$15$", "$20$"], answer: "$10$", explanation: "$15 - 5 = 10$", topic: "Arithmetic" };
+            calculateStaticGain(); renderQuestion(); p.elapsedTime = 0; startTimer();
+        }
+
+        function calculateStaticGain() {
+            const p = getP();
+            let k = p.totalPlayed < 10 ? INITIAL_K : BASE_K;
+            const exp = 1 / (1 + Math.pow(10, (p.puzzleElo - p.elo) / 400));
+            // Store it globally for the active session since it's recalculated fresh per question
+            window.currentPotentialGain = Math.max(MIN_WIN, Math.min(MAX_WIN, Math.round(k * (1 - exp))));
+            const gainEl = document.getElementById('potential-gain-text');
+            if (gainEl) gainEl.innerText = '+' + window.currentPotentialGain;
+        }
+
+        function startTimer(resume = false) {
+            const p = getP();
+            const now = Date.now();
+            window.startTime = resume ? now - (p.elapsedTime * 1000) : now;
+            
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => { 
+                p.elapsedTime = (Date.now() - window.startTime) / 1000; 
+                const el = document.getElementById('timer-text'); 
+                if(el) el.innerText = p.elapsedTime.toFixed(1)+'s'; 
+            }, 100);
+        }
+
+        function togglePause() {
+            playSound('pause');
+            const overlay = document.getElementById('pause-overlay');
+            if (overlay.classList.contains('hidden')) { 
+                overlay.classList.remove('hidden'); 
+                overlay.classList.add('flex');
+                if (timerInterval) clearInterval(timerInterval); 
+            } else { 
+                playSound('resume'); 
+                overlay.classList.add('hidden'); 
+                overlay.classList.remove('flex');
+                startTimer(true); 
+            }
+        }
+        
+        function terminateLink() { 
+            playSound('wrong'); 
+            const p = getP();
+            document.getElementById('pause-overlay').classList.add('hidden'); 
+            document.getElementById('pause-overlay').classList.remove('flex'); 
+            document.getElementById('game-screen').classList.add('hidden'); 
+            document.getElementById('start-screen').classList.remove('hidden'); 
+            if (timerInterval) clearInterval(timerInterval); 
+            
+            // Re-apply static styling for main menu
+            document.body.className = "select-none";
+            saveState();
+            updateStartScreenUI();
+        }
+
+        const norm = (s) => s.toString().replace(/\$/g, '').replace(/\\ /g, '').replace(/[\s,]/g, '').trim().toLowerCase();
+
+        function renderQuestion() {
+            const p = getP();
+            const qEl = document.getElementById('question-card');
+            const topicEl = document.getElementById('topic-tag');
+            const container = document.getElementById('options-container');
+            
+            if (qEl) qEl.innerHTML = `<div>${p.currentQuestion.q}</div>`;
+            if (topicEl) topicEl.innerText = p.currentQuestion.topic;
+            document.getElementById('question-num').innerText = p.totalPlayed + 1;
+            
+            if (container) {
+                container.innerHTML = '';
+                const lbls = ['A', 'B', 'C', 'D'];
+                p.currentQuestion.options.forEach((opt, idx) => {
+                    let cOpt = opt.toString(); 
+                    if (!cOpt.includes('$')) cOpt = `$${cOpt}$`; // Safe-wrap LaTeX
+                    const btn = document.createElement('button');
+                    btn.className = 'option-card group disabled:opacity-50 hover:border-theme';
+                    btn.innerHTML = `<div class="option-key group-hover:border-theme theme-text">${lbls[idx]}</div> <span class="flex-1 text-sm font-semibold text-left text-slate-300 group-hover:text-white transition-colors">${cOpt}</span>`;
+                    btn.onmouseenter = () => playSound('hover');
+                    btn.onclick = () => { playSound('click'); checkAnswer(opt, btn); };
+                    container.appendChild(btn);
+                });
+            }
+            
+            const solT = document.getElementById('solution-text');
+            if (solT) solT.innerHTML = p.currentQuestion.explanation;
+            
+            const focusEl = document.getElementById('focus-tag');
+            if (focusEl) focusEl.innerText = p.subMode === 'free' ? 'Free Mode' : (p.currentSpecialization || 'Topic Mode');
+
+            // Set dynamic colors based on active protocol
+            applyDynamicTheme();
+
+            if (window.MathJax) { MathJax.typesetPromise([qEl, container, solT]).catch(e => {}); }
+        }
+
+        function handleShowSolution() {
+            playSound('click');
+            const p = getP();
+            const btns = document.querySelectorAll('#options-container button');
+            btns.forEach(btn => { 
+                const txt = btn.querySelector('span:last-child');
+                if (txt && norm(txt.innerText) === norm(p.currentQuestion.answer)) btn.classList.add('hit-correct');
+            });
+            const solA = document.getElementById('solution-area');
+            if (solA) solA.classList.remove('hidden');
+            document.getElementById('show-solution-btn').disabled = true;
+            if (window.MathJax) MathJax.typesetPromise([solA]);
+        }
+
+        function checkAnswer(sel, btn) {
+            const p = getP();
+            if (p.isResolved) return;
+            
+            p.isResolved = true; 
+            p.selectedAnswer = sel;
+            if (timerInterval) clearInterval(timerInterval);
+            
+            p.avgSolvingTime = (p.avgSolvingTime * 0.5) + (p.elapsedTime * 0.5);
+            const isCor = norm(sel) === norm(p.currentQuestion.answer);
+            p.totalPlayed++;
+            
+            let chg = 0;
+            if (isCor) { 
+                playSound('correct'); 
+                chg = window.currentPotentialGain; 
+                p.solved++; 
+                p.streak++; 
+                btn.classList.add('hit-correct'); 
+            } else { 
+                playSound('wrong'); 
+                const k = p.totalPlayed < 10 ? INITIAL_K : BASE_K; 
+                const exp = 1 / (1 + Math.pow(10, (p.puzzleElo - p.elo) / 400)); 
+                chg = Math.round(k * (0 - exp)); 
+                p.streak = 0; 
+                btn.classList.add('hit-wrong'); 
+            }
+            
+            document.getElementById('action-bar').classList.remove('hidden');
+            document.querySelectorAll('#options-container button').forEach(b => b.disabled = true);
+            
+            p.elo = Math.max(100, p.elo + chg);
+            showEloPing(chg); 
+            updateUI();
+            saveState(); // Save state on answer
+            
+            const ov = document.getElementById('feedback-overlay');
+            if (ov) { 
+                ov.className = `absolute inset-0 z-[60] flex flex-col items-center justify-center text-9xl pointer-events-none ${isCor ? 'text-emerald-500' : 'text-rose-500'}`; 
+                ov.innerHTML = isCor ? '<i class="fas fa-check-circle drop-shadow-2xl"></i>' : '<i class="fas fa-times-circle drop-shadow-2xl"></i>'; 
+                ov.classList.remove('hidden'); 
+                setTimeout(() => { 
+                    ov.classList.add('hidden'); 
+                    ov.classList.remove('flex');
+                    ov.innerHTML = ''; 
+                }, 1000); 
+            }
+        }
+
+        function showEloPing(v) {
+            const container = document.getElementById('elo-anim-container'); if (!container) return;
+            const d = document.createElement('div'); d.className = `elo-ping ${v >= 0 ? 'text-emerald-400' : 'text-rose-500'} font-bold`; d.innerText = (v >= 0 ? '+' : '') + v; container.appendChild(d); setTimeout(() => d.remove(), 1200);
+        }
+
+        function getDifficultyLabel(elo) {
+            for (let t of TIER_BORDERS) if (elo < t.boundary) return t.label;
+            return "Advanced Research";
+        }
+
+        function updateUI() {
+            const p = getP();
+            const pEloEl = document.getElementById('player-elo');
+            const badgeEl = document.getElementById('difficulty-badge');
+            const accEl = document.getElementById('accuracy-text');
+            const streakEl = document.getElementById('streak');
+            
+            if (pEloEl) pEloEl.innerText = Math.round(p.elo);
+            if (streakEl) streakEl.innerText = p.streak;
+            if (accEl) accEl.innerText = p.totalPlayed === 0 ? "100%" : Math.round((p.solved/p.totalPlayed)*100) + "%";
+            if (badgeEl) {
+                p.difficultyLabel = getDifficultyLabel(p.elo);
+                badgeEl.innerText = p.difficultyLabel;
+            }
+        }
+    </script>
+</body>
+</html>
