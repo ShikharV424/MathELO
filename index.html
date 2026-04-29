@@ -1129,8 +1129,9 @@
                         return JSON.parse(jsonString);
                         
                     } catch (error) {
-                        console.warn(`[${modelName}] Attempt ${i + 1} failed: ${error.message}`);
-                        const errStr = error.message.toLowerCase();
+                        const errorMsg = error?.message || String(error);
+                        console.warn(`[${modelName}] Attempt ${i + 1} failed: ${errorMsg}`);
+                        const errStr = errorMsg.toLowerCase();
                         if (errStr.includes("limit") || errStr.includes("quota") || errStr.includes("free") || errStr.includes("exhausted") || errStr.includes("not found") || errStr.includes("429") || i === retries) {
                             showModelToast();
                             currentModelIndex++; 
@@ -1270,7 +1271,7 @@
             updateStartScreenUI();
         }
 
-        const norm = (s) => s.toString().replace(/\$/g, '').replace(/\\ /g, '').replace(/[\s,]/g, '').trim().toLowerCase();
+        const norm = (s) => (s == null ? '' : s).toString().replace(/\$/g, '').replace(/\\ /g, '').replace(/[\s,]/g, '').trim().toLowerCase();
 
         function renderQuestion() {
             const p = getP();
