@@ -191,20 +191,26 @@
         .floating-btn:hover { color: white; transform: scale(1.05); }
         .btn-history { right: 1.5rem; }
         .btn-saves { right: 4.5rem; }
+        .btn-admin { top: auto; bottom: 1.5rem; left: 1.5rem; right: auto; }
     </style>
 </head>
 <body class="select-none flex flex-col min-h-screen relative">
 
     <div class="app-bg"></div>
 
-    <!-- GLOBAL BUTTONS (Moved Puter button to top right) -->
+    <!-- GLOBAL BUTTONS -->
     <div class="fixed top-[1.5rem] right-[7.5rem] z-[100]">
         <button id="puter-auth-btn" onclick="toggleAuth()" onmouseenter="playSound('hover')" class="px-4 py-2.5 bg-slate-900/80 border border-white/10 rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white hover:bg-blue-600/20 hover:border-blue-500/30 transition-all backdrop-blur-md flex items-center gap-2 shadow-lg">
             <i class="fas fa-user-astronaut text-sm"></i> <span id="puter-auth-text">Link Puter Account</span>
         </button>
     </div>
 
-    <button onclick="openModelHistory()" onmouseenter="playSound('hover')" class="floating-btn btn-history" title="Server Uplink Status">
+    <!-- ADMIN FLOATING BTN -->
+    <button onclick="requestAdminAccess()" onmouseenter="playSound('hover')" class="floating-btn btn-admin" title="Admin Override Console">
+        <i class="fas fa-user-shield"></i>
+    </button>
+
+    <button onclick="requestModelHistory()" onmouseenter="playSound('hover')" class="floating-btn btn-history" title="Server Uplink Status">
         <i class="fas fa-server"></i>
     </button>
     
@@ -228,10 +234,30 @@
         </div>
     </div>
 
+    <!-- ADMIN CONSOLE OVERLAY -->
+    <div id="admin-panel-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8 z-[2600]">
+        <div class="max-w-md w-full space-y-6 text-center bg-slate-900 p-8 rounded-3xl border border-blue-500/30 shadow-2xl">
+            <h2 class="label-caps text-blue-500">System Override</h2>
+            <h1 class="text-3xl font-black italic text-white tracking-tighter uppercase">Admin Console</h1>
+            <div class="text-left space-y-4">
+                <div>
+                    <label class="label-caps block mb-2 text-slate-400">Target Initialization ELO</label>
+                    <input type="number" id="admin-elo-input" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-xl focus:outline-none focus:border-blue-500 placeholder:text-slate-700" placeholder="e.g. 1500" value="1000">
+                </div>
+                <div class="space-y-3 pt-2">
+                    <button onclick="executeAdminOverride('foundation')" class="action-btn !py-3 hover:!bg-blue-600 border-blue-500/20 text-blue-400 text-[10px]">Force Foundation Mode</button>
+                    <button onclick="executeAdminOverride('competitive')" class="action-btn !py-3 hover:!bg-orange-500 border-orange-500/20 text-orange-400 text-[10px]">Force Competitive Mode</button>
+                    <button onclick="executeAdminOverride('nightmare')" class="action-btn !py-3 hover:!bg-rose-600 border-rose-500/20 text-rose-400 text-[10px]">Force Nightmare Mode</button>
+                </div>
+            </div>
+            <button onclick="closeOverlay('admin-panel-overlay')" class="mt-4 text-slate-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors w-full py-2">Close Console</button>
+        </div>
+    </div>
+
     <!-- MODEL HISTORY OVERLAY -->
     <div id="model-history-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8 z-[2000]">
         <div class="max-w-md w-full space-y-6 text-left bg-slate-900 p-8 rounded-3xl border border-white/5 shadow-2xl flex flex-col max-h-[85vh]">
-            <div class="flex justify-between items-center mb-2">
+            <div class="flex justify-between items-center mb-2 shrink-0">
                 <div>
                     <h2 class="label-caps text-blue-500">Diagnostic Panel</h2>
                     <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">Server Uplink Status</h1>
@@ -242,16 +268,39 @@
         </div>
     </div>
 
+    <!-- COMBAT LOG (QUESTION HISTORY) OVERLAY -->
+    <div id="history-viewer-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-4 md:p-8 z-[2800]">
+        <div class="max-w-4xl w-full text-left bg-slate-900 p-6 md:p-8 rounded-3xl border border-white/5 shadow-2xl flex flex-col h-full max-h-[90vh]">
+            <div class="flex justify-between items-center mb-6 shrink-0">
+                <div>
+                    <h2 class="label-caps text-blue-500" id="history-viewer-subtitle">Session Archive</h2>
+                    <h1 class="text-2xl md:text-3xl font-black italic text-white tracking-tighter uppercase" id="history-viewer-title">Combat Log</h1>
+                </div>
+                <button onclick="closeOverlay('history-viewer-overlay')" class="text-slate-500 hover:text-white transition-colors w-10 h-10 flex items-center justify-center rounded-xl bg-white/5"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="history-list-container" class="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-slate-700 pb-4">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
     <!-- SESSIONS / SAVE STATES OVERLAY -->
     <div id="sessions-list-overlay" class="overlay-glass fixed inset-0 hidden flex-col items-center justify-center p-8 z-[2000]">
         <div class="max-w-md w-full space-y-6 text-left bg-slate-900 p-8 rounded-3xl border border-white/5 shadow-2xl flex flex-col max-h-[85vh]">
-            <div class="flex justify-between items-center mb-2">
+            <div class="flex justify-between items-center mb-2 shrink-0">
                 <div>
                     <h2 class="label-caps text-blue-500">Archive</h2>
                     <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">Save States</h1>
                 </div>
                 <button onclick="closeOverlay('sessions-list-overlay')" class="text-slate-500 hover:text-white transition-colors w-8 h-8 flex items-center justify-center rounded-lg bg-white/5"><i class="fas fa-times"></i></button>
             </div>
+            
+            <div class="w-full shrink-0 border-b border-white/10 pb-4">
+                <button onclick="viewHistory('current')" onmouseenter="playSound('hover')" class="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-bold text-white uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-history text-blue-400 text-sm"></i> View Current Session History
+                </button>
+            </div>
+
             <div id="sessions-container" class="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-slate-700">
                 <!-- Populated via JS -->
             </div>
@@ -357,7 +406,7 @@
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                 </span>
-                <span class="label-caps !text-slate-400 tracking-widest">Protocol v6.3 // Mobile Stability Core</span>
+                <span class="label-caps !text-slate-400 tracking-widest">Protocol v7.0 // Advanced Audit & Override</span>
             </div>
             <h1 class="text-6xl md:text-8xl font-black italic tracking-tighter text-white mb-2">MATH<span class="text-blue-500">ELO</span></h1>
         </div>
@@ -560,9 +609,9 @@
         ];
 
         const DEFAULT_PROTOCOLS = {
-            foundation:  { elo: 100,  totalPlayed: 0, solved: 0, streak: 0, currentQuestion: null, puzzleElo: 100,  difficultyLabel: 'Nursery', elapsedTime: 0, specializationHistory: [], lastMilestoneReached: null, subMode: 'free', isResolved: false, selectedAnswer: null, lastTopics: [] },
-            competitive: { elo: 625,  totalPlayed: 0, solved: 0, streak: 0, currentQuestion: null, puzzleElo: 625,  difficultyLabel: 'Class 9', elapsedTime: 0, specializationHistory: [], lastMilestoneReached: null, subMode: 'free', isResolved: false, selectedAnswer: null, lastTopics: [] },
-            nightmare:   { elo: 1375, totalPlayed: 0, solved: 0, streak: 0, currentQuestion: null, puzzleElo: 1375, difficultyLabel: 'JEE Advanced', elapsedTime: 0, specializationHistory: [], lastMilestoneReached: null, subMode: 'free', isResolved: false, selectedAnswer: null, lastTopics: [] }
+            foundation:  { elo: 100,  totalPlayed: 0, solved: 0, streak: 0, currentQuestion: null, puzzleElo: 100,  difficultyLabel: 'Nursery', elapsedTime: 0, specializationHistory: [], lastMilestoneReached: null, subMode: 'free', isResolved: false, selectedAnswer: null, lastTopics: [], history: [] },
+            competitive: { elo: 625,  totalPlayed: 0, solved: 0, streak: 0, currentQuestion: null, puzzleElo: 625,  difficultyLabel: 'Class 9', elapsedTime: 0, specializationHistory: [], lastMilestoneReached: null, subMode: 'free', isResolved: false, selectedAnswer: null, lastTopics: [], history: [] },
+            nightmare:   { elo: 1375, totalPlayed: 0, solved: 0, streak: 0, currentQuestion: null, puzzleElo: 1375, difficultyLabel: 'JEE Advanced', elapsedTime: 0, specializationHistory: [], lastMilestoneReached: null, subMode: 'free', isResolved: false, selectedAnswer: null, lastTopics: [], history: [] }
         };
 
         let globalState = {
@@ -578,6 +627,7 @@
         let pendingAction = null; // Used for saving states
         let sessionToDelete = null; // Target ID for deletion
         let timerInterval = null;
+        let authTarget = 'models'; // 'models' or 'admin'
 
         // --- PUTER AUTHENTICATION & SAVE SYSTEM ---
         
@@ -637,6 +687,17 @@
                 const saved = await puter.kv.get('math_elo_v6');
                 if (saved) {
                     globalState = { ...globalState, ...saved };
+                    
+                    // Retrofit missing history arrays for older saves
+                    ['foundation', 'competitive', 'nightmare'].forEach(prot => {
+                        if (!globalState.protocols[prot].history) globalState.protocols[prot].history = [];
+                    });
+                    globalState.sessions.forEach(s => {
+                        ['foundation', 'competitive', 'nightmare'].forEach(prot => {
+                            if (!s.protocols[prot].history) s.protocols[prot].history = [];
+                        });
+                    });
+
                     updateStartScreenUI();
                 }
             } catch (e) {
@@ -675,10 +736,12 @@
                             <p class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">${session.timestamp}</p>
                         </div>
                         <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <button class="view-session-history-btn px-3 py-2 bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-all" title="View Combat Log"><i class="fas fa-list"></i></button>
                             <button class="delete-session-btn px-3 py-2 bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-all" title="Delete Session"><i class="fas fa-trash-alt"></i></button>
                             <button class="load-session-btn px-4 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-all">Load</button>
                         </div>
                     `;
+                    div.querySelector('.view-session-history-btn').onclick = (e) => { e.stopPropagation(); viewHistory(session.id); };
                     div.querySelector('.load-session-btn').onclick = () => confirmLoadSession(session.id);
                     div.querySelector('.delete-session-btn').onclick = (e) => {
                         e.stopPropagation();
@@ -688,8 +751,110 @@
                 });
             }
             document.getElementById('sessions-list-overlay').classList.remove('hidden');
-            // Ensure flex is added
             document.getElementById('sessions-list-overlay').classList.add('flex');
+        }
+
+        // --- COMBAT LOG (HISTORY) VIEWER ---
+
+        function viewHistory(targetId) {
+            playSound('click');
+            let targetState;
+            let titleText = "";
+            
+            if (targetId === 'current') {
+                targetState = globalState;
+                titleText = "Current Active Session";
+            } else {
+                const session = globalState.sessions.find(s => s.id === targetId);
+                if (!session) return;
+                targetState = session;
+                titleText = session.name;
+            }
+
+            document.getElementById('history-viewer-subtitle').innerText = titleText;
+
+            // Combine all history logs from protocols
+            let combined = [];
+            ['foundation', 'competitive', 'nightmare'].forEach(prot => {
+                const h = targetState.protocols[prot]?.history || [];
+                h.forEach(item => combined.push({...item, protocol: prot}));
+            });
+
+            // Sort chronologically descending
+            combined.sort((a, b) => b.timestamp - a.timestamp);
+
+            const container = document.getElementById('history-list-container');
+            container.innerHTML = '';
+
+            if (combined.length === 0) {
+                container.innerHTML = '<div class="text-center p-8 text-slate-500 italic">No combat log entries found for this session.</div>';
+            } else {
+                combined.forEach(item => {
+                    const protColors = {
+                        foundation: 'text-blue-400 border-blue-500/30 bg-blue-500/10',
+                        competitive: 'text-orange-400 border-orange-500/30 bg-orange-500/10',
+                        nightmare: 'text-rose-400 border-rose-500/30 bg-rose-500/10'
+                    };
+                    const badgeClass = protColors[item.protocol] || 'text-slate-400 border-slate-500/30 bg-slate-500/10';
+                    const eloColor = item.eloChange >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                    const eloSign = item.eloChange >= 0 ? '+' : '';
+
+                    const div = document.createElement('div');
+                    div.className = 'p-5 bg-slate-800/40 rounded-2xl border border-white/5 relative shrink-0';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex gap-2 items-center">
+                                <span class="px-2 py-1 text-[9px] font-bold uppercase tracking-widest rounded border ${badgeClass}">${item.protocol}</span>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">${item.topic}</span>
+                            </div>
+                            <span class="${eloColor} font-black text-sm">${eloSign}${item.eloChange} ELO</span>
+                        </div>
+                        <div class="text-white text-base md:text-lg mb-6 leading-relaxed overflow-x-auto">${item.question}</div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                            <div class="p-3 rounded-xl border ${item.isCorrect ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/20'}">
+                                <span class="block text-[10px] text-slate-500 uppercase tracking-widest mb-2">Your Answer</span>
+                                <div class="text-white font-medium text-sm overflow-x-auto">${item.userAnswer}</div>
+                            </div>
+                            <div class="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                                <span class="block text-[10px] text-slate-500 uppercase tracking-widest mb-2">Target Solution</span>
+                                <div class="text-white font-medium text-sm overflow-x-auto">${item.correctAnswer}</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mt-4">
+                            <span class="text-xs text-slate-400 font-mono bg-black/30 px-2 py-1 rounded"><i class="fas fa-stopwatch text-slate-500 mr-1"></i> ${item.time}s</span>
+                            <button onclick="toggleExplanation(this)" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-widest transition-colors flex items-center gap-1">
+                                Examine Trace <i class="fas fa-chevron-down transition-transform"></i>
+                            </button>
+                        </div>
+                        <div class="explanation-box hidden mt-4 pt-4 border-t border-white/10 text-slate-300 text-sm italic leading-relaxed overflow-x-auto">
+                            ${item.explanation}
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            document.getElementById('sessions-list-overlay').classList.add('hidden');
+            document.getElementById('sessions-list-overlay').classList.remove('flex');
+            document.getElementById('history-viewer-overlay').classList.remove('hidden');
+            document.getElementById('history-viewer-overlay').classList.add('flex');
+            
+            if (window.MathJax) {
+                MathJax.typesetPromise([container]).catch(e => console.error(e));
+            }
+        }
+
+        function toggleExplanation(btn) {
+            playSound('hover');
+            const box = btn.parentElement.nextElementSibling;
+            const icon = btn.querySelector('i');
+            if (box.classList.contains('hidden')) {
+                box.classList.remove('hidden');
+                icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            } else {
+                box.classList.add('hidden');
+                icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            }
         }
 
         function confirmLoadSession(id) {
@@ -791,14 +956,14 @@
                     globalState.protocols = JSON.parse(JSON.stringify(target.protocols));
                     saveState();
                     updateStartScreenUI();
-                    // if currently in game, reset back to main screen to reflect changes cleanly
                     terminateLink(); 
                 }
             }
             pendingAction = null;
         }
 
-        // Setup OTPAuth for Google Authenticator Lock
+        // --- SECURITY / ADMIN MODULE ---
+
         let adminTotp = null;
         window.addEventListener('load', () => {
             try {
@@ -816,6 +981,120 @@
                 console.warn("OTPAuth failed to load", e);
             }
         });
+
+        function requestModelHistory() {
+            playSound('click');
+            authTarget = 'models';
+            openAuthPopup();
+        }
+
+        function requestAdminAccess() {
+            playSound('click');
+            authTarget = 'admin';
+            openAuthPopup();
+        }
+
+        function openAuthPopup() {
+            const inputEl = document.getElementById('auth-input');
+            inputEl.value = ''; 
+            inputEl.classList.remove('border-rose-500', 'text-rose-500');
+            document.getElementById('auth-overlay').classList.remove('hidden');
+            document.getElementById('auth-overlay').classList.add('flex');
+            inputEl.focus();
+        }
+
+        function verifyAuthCode() {
+            playSound('click');
+            if (!adminTotp) {
+                alert("Security module unavailable.");
+                return;
+            }
+
+            const authCode = document.getElementById('auth-input').value.trim();
+            if (!authCode) return;
+            
+            const delta = adminTotp.validate({ token: authCode, window: 1 });
+            if (delta === null) {
+                const inputEl = document.getElementById('auth-input');
+                inputEl.classList.add('border-rose-500', 'text-rose-500');
+                setTimeout(() => inputEl.classList.remove('border-rose-500', 'text-rose-500'), 800);
+                return;
+            }
+
+            document.getElementById('auth-overlay').classList.add('hidden');
+            document.getElementById('auth-overlay').classList.remove('flex');
+            
+            if (authTarget === 'models') {
+                showModelMatrix();
+            } else if (authTarget === 'admin') {
+                showAdminPanel();
+            }
+        }
+
+        function showModelMatrix() {
+            const list = document.getElementById('model-history-list');
+            list.innerHTML = '';
+            
+            AI_MODELS.forEach((model, index) => {
+                const div = document.createElement('div');
+                const displayModelName = model;
+                
+                if (index < currentModelIndex) {
+                    div.className = 'p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex justify-between items-center';
+                    div.innerHTML = `<span class="font-mono text-sm">${displayModelName}</span> <span class="text-[10px] font-bold uppercase px-2 py-1 bg-rose-500/20 rounded">Offline</span>`;
+                } else if (index === currentModelIndex) {
+                    div.className = 'p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex justify-between items-center shadow-[0_0_15px_rgba(16,185,129,0.1)]';
+                    div.innerHTML = `<span class="font-mono text-sm">${displayModelName}</span> <span class="text-[10px] font-bold uppercase px-2 py-1 bg-emerald-500/20 rounded animate-pulse">Active</span>`;
+                } else {
+                    div.className = 'p-4 rounded-xl bg-slate-800/50 border border-white/5 text-slate-500 flex justify-between items-center opacity-70';
+                    div.innerHTML = `<span class="font-mono text-sm">${displayModelName}</span> <span class="text-[10px] font-bold uppercase px-2 py-1 bg-white/5 rounded">Standby</span>`;
+                }
+                list.appendChild(div);
+            });
+            
+            document.getElementById('model-history-overlay').classList.remove('hidden');
+            document.getElementById('model-history-overlay').classList.add('flex');
+        }
+
+        function showAdminPanel() {
+            document.getElementById('admin-panel-overlay').classList.remove('hidden');
+            document.getElementById('admin-panel-overlay').classList.add('flex');
+            document.getElementById('admin-elo-input').focus();
+        }
+
+        function executeAdminOverride(protocol) {
+            playSound('click');
+            const eloInput = document.getElementById('admin-elo-input').value;
+            const targetElo = parseInt(eloInput) || 1000;
+
+            globalState.currentProtocol = protocol;
+            const p = getP();
+            
+            // Forcefully overwrite protocol state for admin testing
+            p.elo = targetElo;
+            p.puzzleElo = targetElo;
+            p.totalPlayed = 0;
+            p.solved = 0;
+            p.streak = 0;
+            p.elapsedTime = 0;
+            p.currentQuestion = null;
+            p.isResolved = false;
+            p.selectedAnswer = null;
+            p.subMode = 'free';
+            p.specializationHistory = [];
+            p.lastMilestoneReached = null;
+            p.lastTopics = [];
+            p.history = []; // Purge history for clean start
+
+            saveState();
+
+            document.getElementById('admin-panel-overlay').classList.add('hidden');
+            document.getElementById('admin-panel-overlay').classList.remove('flex');
+            
+            launchGameUI();
+        }
+
+        // --- AUDIO CORE ---
 
         let audioCtx = null;
         try {
@@ -839,7 +1118,6 @@
                 g.gain.setValueAtTime(s, now);
                 g.gain.exponentialRampToValueAtTime(Math.max(e, 0.0001), now + d); 
                 o.start(now);
-                // Hard kill after ramp finishes to prevent overlapping drone
                 o.stop(now + d + 0.05); 
                 return o;
             }
@@ -854,6 +1132,8 @@
                 case 'next': osc(300, 'sine', 0.5, 0.04, 0.0001); break;
             }
         }
+
+        // --- PROTOCOL / GAME CORE ---
 
         const SYSTEM_PROMPT = `
         You are an elite Indian Math Professor specializing in continuous difficulty blending.
@@ -878,13 +1158,11 @@
             globalState.currentProtocol = protocolName;
             const p = getP();
             
-            // If active session, resume directly
             if (p.totalPlayed > 0 || p.currentQuestion) {
                 launchGameUI();
                 return;
             }
             
-            // Fresh protocol, ask for mode
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('mode-overlay-title').innerText = `${protocolName} Protocol`;
             document.getElementById('mode-overlay').classList.remove('hidden');
@@ -975,7 +1253,6 @@
             applyDynamicTheme();
             updateUI();
             
-            // Check if we have an exact saved state to resume
             const p = getP();
             if (p.currentQuestion) {
                 renderSavedState();
@@ -991,7 +1268,6 @@
             el.innerText = p.elapsedTime.toFixed(1) + 's';
             
             if (p.isResolved) {
-                // Restore the resolved UI state
                 document.getElementById('action-bar').classList.remove('hidden');
                 document.querySelectorAll('#options-container button').forEach(btn => {
                     btn.disabled = true;
@@ -1002,7 +1278,6 @@
                     }
                 });
             } else {
-                // Resume timer
                 startTimer(true);
             }
         }
@@ -1026,7 +1301,7 @@
             return `100% ${B.label}`;
         }
 
-        function showModelToast() {
+        function showModelToast(modelName) {
             let toast = document.getElementById('model-toast');
             if (!toast) {
                 toast = document.createElement('div');
@@ -1046,60 +1321,6 @@
             }, 5000);
         }
 
-        function openModelHistory() {
-            playSound('click');
-            const inputEl = document.getElementById('auth-input');
-            inputEl.value = ''; 
-            inputEl.classList.remove('border-rose-500', 'text-rose-500');
-            document.getElementById('auth-overlay').classList.remove('hidden');
-            document.getElementById('auth-overlay').classList.add('flex');
-            inputEl.focus();
-        }
-
-        function verifyAuthCode() {
-            playSound('click');
-            if (!adminTotp) {
-                alert("Security module unavailable.");
-                return;
-            }
-
-            const authCode = document.getElementById('auth-input').value.trim();
-            if (!authCode) return;
-            
-            const delta = adminTotp.validate({ token: authCode, window: 1 });
-            if (delta === null) {
-                const inputEl = document.getElementById('auth-input');
-                inputEl.classList.add('border-rose-500', 'text-rose-500');
-                setTimeout(() => inputEl.classList.remove('border-rose-500', 'text-rose-500'), 800);
-                return;
-            }
-
-            document.getElementById('auth-overlay').classList.add('hidden');
-            
-            const list = document.getElementById('model-history-list');
-            list.innerHTML = '';
-            
-            AI_MODELS.forEach((model, index) => {
-                const div = document.createElement('div');
-                const displayModelName = model;
-                
-                if (index < currentModelIndex) {
-                    div.className = 'p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex justify-between items-center';
-                    div.innerHTML = `<span class="font-mono text-sm">${displayModelName}</span> <span class="text-[10px] font-bold uppercase px-2 py-1 bg-rose-500/20 rounded">Offline</span>`;
-                } else if (index === currentModelIndex) {
-                    div.className = 'p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex justify-between items-center shadow-[0_0_15px_rgba(16,185,129,0.1)]';
-                    div.innerHTML = `<span class="font-mono text-sm">${displayModelName}</span> <span class="text-[10px] font-bold uppercase px-2 py-1 bg-emerald-500/20 rounded animate-pulse">Active</span>`;
-                } else {
-                    div.className = 'p-4 rounded-xl bg-slate-800/50 border border-white/5 text-slate-500 flex justify-between items-center opacity-70';
-                    div.innerHTML = `<span class="font-mono text-sm">${displayModelName}</span> <span class="text-[10px] font-bold uppercase px-2 py-1 bg-white/5 rounded">Standby</span>`;
-                }
-                list.appendChild(div);
-            });
-            
-            document.getElementById('model-history-overlay').classList.remove('hidden');
-            document.getElementById('model-history-overlay').classList.add('flex');
-        }
-
         async function fetchWithRetry(prompt, retries = 2, delay = 1000) {
             const combinedPrompt = SYSTEM_PROMPT + "\n\n---\n\nUSER REQUEST:\n" + prompt;
 
@@ -1108,16 +1329,17 @@
                 
                 for (let i = 0; i <= retries; i++) {
                     try {
-                        const response = await puter.ai.chat(
-                            combinedPrompt, 
-                            { 
-                                model: modelName,
-                                response_format: { type: "json_object" } 
-                            }
-                        );
+                        const response = await puter.ai.chat(combinedPrompt, { model: modelName });
 
-                        const content = response.toString();
-                        if (!content) throw new Error("Node returned empty/null content.");
+                        let content = "";
+                        if (typeof response === 'string') content = response;
+                        else if (response && response.message && response.message.content) content = response.message.content;
+                        else if (response && response.text) content = response.text;
+                        else content = String(response);
+                        
+                        if (!content || content === "undefined" || content === "[object Object]") {
+                            throw new Error("Node returned empty/invalid content.");
+                        }
                         
                         let jsonString = content.replace(/```json|```/g, '').trim();
                         const jsonStart = jsonString.indexOf('{');
@@ -1129,14 +1351,21 @@
                         return JSON.parse(jsonString);
                         
                     } catch (error) {
-                        const errorMsg = error?.message || String(error);
+                        const errorMsg = (error && typeof error === 'object' && error.message) ? String(error.message) : String(error);
                         console.warn(`[${modelName}] Attempt ${i + 1} failed: ${errorMsg}`);
+                        
                         const errStr = errorMsg.toLowerCase();
-                        if (errStr.includes("limit") || errStr.includes("quota") || errStr.includes("free") || errStr.includes("exhausted") || errStr.includes("not found") || errStr.includes("429") || i === retries) {
-                            showModelToast();
+                        
+                        if (errStr.includes("limit") || errStr.includes("quota") || errStr.includes("free") || 
+                            errStr.includes("exhausted") || errStr.includes("not found") || errStr.includes("429") || 
+                            errStr.includes("cannot read properties") || errStr.includes("undefined") ||
+                            i === retries) {
+                            
+                            showModelToast(modelName);
                             currentModelIndex++; 
                             break; 
                         }
+                        
                         await new Promise(res => setTimeout(res, delay * Math.pow(2, i)));
                     }
                 }
@@ -1156,7 +1385,6 @@
                 if (elo >= 825 && p.lastMilestoneReached === null) { showTopicSelection('base'); p.lastMilestoneReached = 'base'; return; }
             }
 
-            // state.isGenerating prevents overlapping clicks
             p.isResolved = false;
             p.selectedAnswer = null;
             if (p.totalPlayed > 0) playSound('next');
@@ -1198,7 +1426,10 @@
                 const errBox = document.getElementById('error-overlay');
                 const errMsg = document.getElementById('error-message');
                 document.getElementById('error-title').innerText = "Logic Engine Failed";
-                errMsg.innerHTML = `Primary Logic Engine Failed.<br><br><b>Details:</b><br>${err.message}<br><br>Falling back to local logic.`;
+                
+                const errorMsgStr = (err && typeof err === 'object' && err.message) ? String(err.message) : String(err);
+                
+                errMsg.innerHTML = `Primary Logic Engine Failed.<br><br><b>Details:</b><br>${errorMsgStr}<br><br>Falling back to local logic.`;
                 errBox.classList.remove('hidden');
                 errBox.classList.add('flex');
                 generateFallback(); 
@@ -1222,7 +1453,6 @@
             const p = getP();
             let k = p.totalPlayed < 10 ? INITIAL_K : BASE_K;
             const exp = 1 / (1 + Math.pow(10, (p.puzzleElo - p.elo) / 400));
-            // Store it globally for the active session since it's recalculated fresh per question
             window.currentPotentialGain = Math.max(MIN_WIN, Math.min(MAX_WIN, Math.round(k * (1 - exp))));
             const gainEl = document.getElementById('potential-gain-text');
             if (gainEl) gainEl.innerText = '+' + window.currentPotentialGain;
@@ -1265,8 +1495,7 @@
             document.getElementById('start-screen').classList.remove('hidden'); 
             if (timerInterval) clearInterval(timerInterval); 
             
-            // Re-apply static styling for main menu
-            document.body.className = "select-none";
+            document.body.className = "select-none flex flex-col min-h-screen relative";
             saveState();
             updateStartScreenUI();
         }
@@ -1288,7 +1517,7 @@
                 const lbls = ['A', 'B', 'C', 'D'];
                 p.currentQuestion.options.forEach((opt, idx) => {
                     let cOpt = opt.toString(); 
-                    if (!cOpt.includes('$')) cOpt = `$${cOpt}$`; // Safe-wrap LaTeX
+                    if (!cOpt.includes('$')) cOpt = `$${cOpt}$`; 
                     const btn = document.createElement('button');
                     btn.className = 'option-card group disabled:opacity-50 hover:border-theme';
                     btn.innerHTML = `<div class="option-key group-hover:border-theme theme-text">${lbls[idx]}</div> <span class="flex-1 text-sm font-semibold text-left text-slate-300 group-hover:text-white transition-colors">${cOpt}</span>`;
@@ -1304,7 +1533,6 @@
             const focusEl = document.getElementById('focus-tag');
             if (focusEl) focusEl.innerText = p.subMode === 'free' ? 'Free Mode' : (p.currentSpecialization || 'Topic Mode');
 
-            // Set dynamic colors based on active protocol
             applyDynamicTheme();
 
             if (window.MathJax) { MathJax.typesetPromise([qEl, container, solT]).catch(e => {}); }
@@ -1352,13 +1580,27 @@
                 btn.classList.add('hit-wrong'); 
             }
             
+            // Record History
+            p.history = p.history || [];
+            p.history.push({
+                question: p.currentQuestion.q,
+                topic: p.currentQuestion.topic || 'Unknown',
+                correctAnswer: p.currentQuestion.answer,
+                userAnswer: sel,
+                explanation: p.currentQuestion.explanation,
+                time: p.elapsedTime.toFixed(1),
+                eloChange: chg,
+                isCorrect: isCor,
+                timestamp: Date.now()
+            });
+
             document.getElementById('action-bar').classList.remove('hidden');
             document.querySelectorAll('#options-container button').forEach(b => b.disabled = true);
             
             p.elo = Math.max(100, p.elo + chg);
             showEloPing(chg); 
             updateUI();
-            saveState(); // Save state on answer
+            saveState(); 
             
             const ov = document.getElementById('feedback-overlay');
             if (ov) { 
