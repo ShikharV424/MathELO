@@ -1080,7 +1080,6 @@
             p.currentQuestion = null;
             p.isResolved = false;
             p.selectedAnswer = null;
-            p.subMode = 'free';
             p.specializationHistory = [];
             p.lastMilestoneReached = null;
             p.lastTopics = [];
@@ -1091,7 +1090,11 @@
             document.getElementById('admin-panel-overlay').classList.add('hidden');
             document.getElementById('admin-panel-overlay').classList.remove('flex');
             
-            launchGameUI();
+            // Route to mode selection instead of direct launch
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('mode-overlay-title').innerText = `${protocol} Protocol`;
+            document.getElementById('mode-overlay').classList.remove('hidden');
+            document.getElementById('mode-overlay').classList.add('flex');
         }
 
         // --- AUDIO CORE ---
